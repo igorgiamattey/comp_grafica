@@ -1,6 +1,7 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifndef M_PI
 	#define M_PI 3.14159265358979323846
@@ -21,9 +22,11 @@ const float RED[3] = {1.0f, 0.41f, 0.41f};
 const float GREEN[3] = {0.41f, 1.0f, 0.41f};
 const float BROWN[3] = {0.55f, 0.27f, 0.07f};
 const float GOLD[3] = {1.0f, 0.84f, 0.0f};
-const float BLUE[3] = {0.41f, 0.41f, 1.0f};
+const float PURPLE[3] = {1.0f, 0.41f, 1.0f};
 const float WHITE[3] = {1.0f, 1.0f, 1.0f};
 const float BLACK_60[4] = {0.0f, 0.0f, 0.0f, 0.6f};
+const float GREY[3] = {0.5f, 0.5f, 0.5f};
+const float YELLOW[3] = {1.0f, 1.0f, 0.41f};
 
 GLfloat angle, fAspect;
 int winW = 400, winH = 400;
@@ -81,12 +84,23 @@ void ApplyNormal(Point3D v1, Point3D v2, Point3D v3) {
 	glNormal3f(N[0], N[1], N[2]);
 }
 
-void DrawHouse (int isSelected){
+void DrawFloor (void){
+	
+	glColor3fv(GREY);
+
+	glBegin(GL_QUADS);
+		glNormal3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(-10000.0f, -25.1f, -10000.0f);
+        glVertex3f(-10000.0f, -25.1f,  10000.0f);
+        glVertex3f( 10000.0f, -25.1f,  10000.0f);
+        glVertex3f( 10000.0f, -25.1f, -10000.0f);
+    glEnd();
+}
+
+void DrawHouse (const float * baseColour){
+	
 	// House Base
-	if (isSelected)
-		glColor3fv(BLUE);
-	else
-		glColor3fv(GREEN);
+	glColor3fv(baseColour);
 		
 	glBegin(GL_QUADS);	// Front
 		glNormal3f(0.0, 0.0, 1.0);
@@ -129,6 +143,7 @@ void DrawHouse (int isSelected){
 	glEnd();
 
 	glBegin(GL_QUADS);	// Bottom
+		glColor3fv(YELLOW);
 		glNormal3f(0.0, -1.0, 0.0);
 		glVertex3f(-25.0, -25.0, -50.0);
 		glVertex3f(25.0, -25.0, -50.0);
@@ -180,13 +195,22 @@ void DrawHouse (int isSelected){
 	glEnd();
 
 	// Door
+	glColor3fv(BROWN);
+	
 	glBegin(GL_QUADS);
-		glColor3fv(BROWN);
 		glNormal3f(0.0, 0.0, 1.0);
 		glVertex3f(10.0, 5.0, 50.1);
 		glVertex3f(-10.0, 5.0, 50.1);
 		glVertex3f(-10.0, -25.0, 50.1);
 		glVertex3f(10.0, -25.0, 50.1);
+	glEnd();
+
+	glBegin(GL_QUADS);
+		glNormal3f(0.0, 0.0, 1.0);
+		glVertex3f(10.0, 5.0, 49.9);
+		glVertex3f(-10.0, 5.0, 49.9);
+		glVertex3f(-10.0, -25.0, 49.9);
+		glVertex3f(10.0, -25.0, 49.9);
 	glEnd();
 
 	// Door Knob
@@ -205,6 +229,38 @@ void RenderText (float x, float y, const char *string){
 }
 
 void DrawHUD (void){
+	
+	char yawStr[32];
+	sprintf(yawStr, "Yaw: %.2f", camYaw);
+	const char* lines[] = {
+		yawStr,
+		" ",
+		"CONTROLS:",
+		"<- / -> : Move Camera",
+		"W : Move Forwards",
+		"A : Strafe Left",
+		"S : Mode Backwards",
+		"D : Strafe Right",
+		"ESC : Exit Program"
+	};
+
+	int numLines = sizeof(lines)/sizeof(lines[0]);
+	int maxW = 0;
+
+	void* font = GLUT_BITMAP_HELVETICA_12;
+    
+    for (int i = 0; i < numLines; i++) {
+        int w = glutBitmapLength(font, (const unsigned char*)lines[i]);
+        if (w > maxW)
+			maxW = w;
+    }
+
+	int padding = 15;
+	int lineH = 16;
+	int boxW = maxW + (padding * 2);
+	int boxH = (numLines * lineH) + (padding * 2);
+
+	
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
@@ -222,25 +278,23 @@ void DrawHUD (void){
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4fv(BLACK_60);
 
+	int x1 = 10, y1 = 10;
+    int x2 = x1 + boxW;
+    int y2 = y1 + boxH;
+
 	glBegin(GL_QUADS);
-		glVertex2i(10, 10);
-		glVertex2i(240, 10);
-		glVertex2i(240, 150);
-		glVertex2i(10, 150);
+		glVertex2i(x1, y1);
+		glVertex2i(x2, y1);
+		glVertex2i(x2, y2);
+		glVertex2i(x1, y2);
 	glEnd();
 	glDisable(GL_BLEND);
 
 	glColor3fv(WHITE);
-
-	int startY = 130, spacing = 16;
-
-	RenderText(20, startY, "CONTROLS:");
-	RenderText(20, startY - spacing * 1, "<- / -> : Move Camera");
-	RenderText(20, startY - spacing * 2, "W : Move Forwards");
-	RenderText(20, startY - spacing * 3, "A : Strafe Left");
-	RenderText(20, startY - spacing * 4, "S : Mode Backwards");
-	RenderText(20, startY - spacing * 5, "D : Strafe Right");
-	RenderText(20, startY - spacing * 6, "ESC : Exit Program");
+	for (int i = 0; i < numLines; i++){
+		int textY = y2 - padding - (i * lineH) - 10;
+		RenderText(x1 + padding, textY, lines[i]);
+	}
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -258,15 +312,12 @@ void Desenha (void){
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	DrawFloor();
+
 	for (int i = 0; i < 2; i++){
 		glPushMatrix();
 			glTranslatef(houses[i].posX, 0.0f, 0.0f);
-
-			glRotatef(houses[i].rotX, 1.0f, 0.0f, 0.0f);
-			glRotatef(houses[i].rotY, 0.0f, 1.0f, 0.0f);
-			glRotatef(houses[i].rotZ, 0.0f, 0.0f, 1.0f);
-
-			DrawHouse(i == selectedHouse);
+			DrawHouse(i ? GREEN : PURPLE);
 		glPopMatrix();
 	}
 
@@ -275,7 +326,8 @@ void Desenha (void){
 }
 
 void Inicializa (void){ 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	
+	glClearColor(0.41f, 0.41f, 1.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	angle=45;
 
