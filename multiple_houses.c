@@ -1,16 +1,30 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
+
+#define MAX_HOUSES 20
 
 const float RED[3] = {1.0f, 0.41f, 0.41f};
-const float GREEN[3] = {0.41f, 1.0f, 0.41f};
 const float BROWN[3] = {0.55f, 0.27f, 0.07f};
 const float GOLD[3] = {1.0f, 0.84f, 0.0f};
-const float BLUE[3] = {0.41f, 0.41f, 1.0f};
-const float WHITE[3] = {1.0f, 1.0f, 1.0f};
 const float BLACK_60[4] = {0.0f, 0.0f, 0.0f, 0.6f};
 
-GLfloat angle, fAspect;
+// House Base Colours
+const float WHITE[3] = {1.0f, 1.0f, 1.0f}; // Selected
+const float GREEN[3] = {0.41f, 1.0f, 0.41f};
+const float BLUE[3] = {0.41f, 0.41f, 1.0f};
+const float YELLOW[3] = {1.0f, 1.0f, 0.41f};
+const float PURPLE[3] = {1.0f, 0.41f, 1.0f};
+const float CYAN[3] = {0.41f, 1.0f, 1.0f};
+
+const float* HOUSE_COLOURS[] = {GREEN, BLUE, YELLOW, PURPLE, CYAN};
+const int NUM_HOUSE_COLORS = 5;
+
+int selectedHouse = 0;
+int numHouses = 1;
+
+GLfloat angle, fAspect = 1.0f;
 int winW = 400, winH = 400;
 
 typedef struct {
@@ -19,15 +33,38 @@ typedef struct {
 
 typedef struct {
 	float rotX, rotY, rotZ;
-	float posX;
+	float posX, posZ;
+	int colour;
 } HouseState;
 
-HouseState houses[2] = {
-	{-15.0f, 0.0f, 0.0f, -60.0f},
-	{-15.0f, 0.0f, 0.0f,  60.0f}
+HouseState houses[MAX_HOUSES] = {
+	{-30.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0},
 };
 
-int selectedHouse = 0;
+void EspecificaParametrosVisualizacao (void){
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	int activeCols = (numHouses < 5) ? numHouses : 5;
+	int activeRows = ((numHouses - 1)/5) + 1;
+
+	float maxDimension = (activeCols > activeRows) ? activeCols : activeRows;
+	float windowSize = 60.0f + (activeCols * 40.0f) + (activeRows * 45.0f);
+
+	if (fAspect <= 1)
+		glOrtho(-windowSize, windowSize, -windowSize / fAspect, windowSize / fAspect, -2000.0, 2000.0);
+	else
+		glOrtho(-windowSize * fAspect, windowSize * fAspect, -windowSize, windowSize, -2000.0, 2000.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	float centerFocusX = ((activeCols - 1) * 120.0f) / 2.0f;
+	float centerFocusZ = -((activeRows - 1) * 250.0f) / 2.0f;
+
+	gluLookAt(centerFocusX, 300.0f, centerFocusZ + 200.0f, centerFocusX, 0, centerFocusZ, 0, 1, 0);
+}
 
 void ApplyNormal(Point3D v1, Point3D v2, Point3D v3) {
 	float U[3], V[3], N[3];
@@ -56,17 +93,38 @@ void ApplyNormal(Point3D v1, Point3D v2, Point3D v3) {
 }
 
 void resetRotation (int n){
-	houses[n].rotX = -15.0;
+	houses[n].rotX = -30.0;
 	houses[n].rotY = 0.0;
 	houses[n].rotZ = 0.0;	
 }
 
-void DrawHouse (int isSelected){
+int getColour (int n){
+	int id, prev_id = -1, bottom_id = -1;
+
+	if (n > 0 && (n % 5 != 0))
+		prev_id = houses[n-1].colour;
+
+	if (n >= 5){
+		bottom_id = houses[n-5].colour;
+	}
+
+	while (1){
+		id = rand() % NUM_HOUSE_COLORS;
+
+		if (id != prev_id && id != bottom_id)
+			break;
+	}
+	
+	return id;
+}
+
+void DrawHouse (int isSelected, int colour){
+	
 	// House Base
 	if (isSelected)
-		glColor3fv(BLUE);
+		glColor3fv(WHITE);
 	else
-		glColor3fv(GREEN);
+		glColor3fv(HOUSE_COLOURS[colour]);
 		
 	glBegin(GL_QUADS);	// Front
 		glNormal3f(0.0, 0.0, 1.0);
@@ -215,12 +273,13 @@ void DrawHUD (void){
 	int startY = 130, spacing = 16;
 
 	RenderText(20, startY, "CONTROLS:");
-    RenderText(20, startY - spacing * 1, "<- / ->: Change Selection");
-    RenderText(20, startY - spacing * 2, "X / Y / Z : Rotate +15 deg");
-	RenderText(20, startY - spacing * 3, "SHIFT + X / Y / Z : Rotate -15 deg");
-    RenderText(20, startY - spacing * 4, "R : Reset Selected Rotation");
-    RenderText(20, startY - spacing * 5, "SHIFT + R : Reset All Rotations");
-    RenderText(20, startY - spacing * 6, "ESC : Exit Program");
+    RenderText(20, startY - spacing * 1, "+ / - : Add or Remove House");
+    RenderText(20, startY - spacing * 2, "Arrows : Change Selection");
+    RenderText(20, startY - spacing * 3, "X / Y / Z : Rotate Selected");
+	RenderText(20, startY - spacing * 4, "SHIFT + X / Y / Z : Rotate Selected");
+    RenderText(20, startY - spacing * 5, "R : Reset Selected Rotation");
+    RenderText(20, startY - spacing * 6, "SHIFT + R : Reset All Rotations");
+    RenderText(20, startY - spacing * 7, "ESC : Exit Program");
 
 	glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
@@ -233,21 +292,25 @@ void DrawHUD (void){
 }
 
 void Desenha (void){
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	for (int i = 0; i < 2; i++){
+	EspecificaParametrosVisualizacao();
+
+	for (int i = 0; i < numHouses; i++){
 		glPushMatrix();
-			glTranslatef(houses[i].posX, 0.0f, 0.0f);
+			glTranslatef(houses[i].posX, 0.0f, houses[i].posZ);
 
 			glRotatef(houses[i].rotX, 1.0f, 0.0f, 0.0f);
 			glRotatef(houses[i].rotY, 0.0f, 1.0f, 0.0f);
 			glRotatef(houses[i].rotZ, 0.0f, 0.0f, 1.0f);
 
-			DrawHouse(i == selectedHouse);
+			DrawHouse(i == selectedHouse, houses[i].colour);
 		glPopMatrix();
 	}
 
 	DrawHUD();
+	
 	glutSwapBuffers();
 }
 
@@ -275,21 +338,6 @@ void Inicializa (void){
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 }
 
-void EspecificaParametrosVisualizacao (void){
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-
-	if (fAspect <= 1)
-		glOrtho(-100.0, 100.0, -100.0 / fAspect, 100.0 / fAspect, 1.0, 500.0);
-	else
-		glOrtho(-100.0 * fAspect, 100.0 * fAspect, -100.0, 100.0, 1.0, 500.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	gluLookAt(0,80,200, 0,0,0, 0,1,0);
-}
-
 void AlteraTamanhoJanela (GLsizei w, GLsizei h){
 	if ( h == 0 ) h = 1;
 	glViewport(0, 0, w, h); 
@@ -297,8 +345,6 @@ void AlteraTamanhoJanela (GLsizei w, GLsizei h){
 
 	winW = w;
 	winH = h;
-
-	EspecificaParametrosVisualizacao();
 }
 
 void GerenciaTeclado (unsigned char key, int x, int y){
@@ -328,9 +374,36 @@ void GerenciaTeclado (unsigned char key, int x, int y){
 			resetRotation(selectedHouse);
 			break;
 		case 'R':
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < numHouses; i++)
 				resetRotation(i);
 			break;
+		case '+':
+		case '=':
+			if (numHouses < MAX_HOUSES){
+
+				int col = numHouses % 5;
+				int row = numHouses/5;
+
+				houses[numHouses].rotX = -30.0f;
+				houses[numHouses].rotY = 0.0f;
+				houses[numHouses].rotZ = 0.0f;
+
+				houses[numHouses].posX = col * 120.0f;
+				houses[numHouses].posZ = -(row * 250.0f);
+
+				houses[numHouses].colour = getColour(numHouses);
+
+				numHouses++;
+				selectedHouse = numHouses - 1;
+			}
+			break;
+		case '-':
+			if (numHouses > 1) {
+				numHouses--;
+				if (selectedHouse >= numHouses) {
+					selectedHouse = numHouses - 1;
+				}
+			}
 	}
 	
 	glutPostRedisplay();
@@ -338,12 +411,38 @@ void GerenciaTeclado (unsigned char key, int x, int y){
 
 void TeclasEspeciais(int key, int x, int y) {
 	
+	int col = selectedHouse % 5;
+	int row = selectedHouse/5;
+	int maxRows = (numHouses - 1)/5;
+
+	int startOfRow = row * 5;
+	int housesInRow = 5;
+
+	if (startOfRow + 5 > numHouses)
+		housesInRow = numHouses - startOfRow;
+	
 	switch (key) {
 		case GLUT_KEY_LEFT:
-			selectedHouse = (selectedHouse - 1 + 2) % 2;
+			selectedHouse = startOfRow + ((col - 1 + housesInRow) % housesInRow);
 			break;
 		case GLUT_KEY_RIGHT:
-			selectedHouse = (selectedHouse + 1) % 2;
+			selectedHouse = startOfRow + ((col + 1) % housesInRow);
+			break;
+		case GLUT_KEY_UP:
+			if (selectedHouse + 5 < numHouses)
+				selectedHouse += 5;
+			else
+				selectedHouse = col;
+			break;
+		case GLUT_KEY_DOWN:
+			if (selectedHouse - 5 >= 0)
+				selectedHouse -= 5;
+			else {
+				int target = col + (maxRows * 5);
+				if (target >= numHouses)
+					target -= 5;
+				selectedHouse = target;
+			}
 			break;
 	}
 	
@@ -352,6 +451,8 @@ void TeclasEspeciais(int key, int x, int y) {
 
 int main(int argc, char **argv) {
 	glutInit(&argc, argv);
+
+	srand(time(NULL));
 	
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	
@@ -360,7 +461,6 @@ int main(int argc, char **argv) {
 
 	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(scrW, scrH);
-	
 	glutCreateWindow("House 3D");
 	glutDisplayFunc(Desenha);
 	glutReshapeFunc(AlteraTamanhoJanela);
