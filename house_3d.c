@@ -43,7 +43,14 @@ const float DARK_BROWN[3] = {0.33f, 0.16f, 0.04f};
 
 GLfloat rotX = 0.0f;
 GLfloat rotY = 0.0f;
+GLfloat rotZ = 0.0f;
 GLfloat angle, fAspect;
+
+void resetRotation (){
+	rotX = 0.0;
+	rotY = 0.0;
+	rotZ = 0.0;	
+}
 
 // Função callback chamada para fazer o desenho
 void Desenha(void)
@@ -55,6 +62,7 @@ void Desenha(void)
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f);
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
+	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	// House Base
 	glColor3fv(GREEN);
@@ -229,30 +237,19 @@ void GerenciaTeclado(unsigned char key, int x, int y) {
 		case 'Y':
 			rotY -= 15.0f;
 			break;
+		case 'z':
+			rotZ += 15.0f;
+			break;
+		case 'Z':
+			rotZ -= 15.0f;
+			break;
+		case 'r':
+			resetRotation();
+			break;
 	}
 	
 	EspecificaParametrosVisualizacao();
 	glutPostRedisplay();
-}
-
-void TeclasEspeciais(int key, int x, int y) {
-    switch (key) {
-        case GLUT_KEY_UP:
-            rotX -= 15.0f;
-            break;
-        case GLUT_KEY_DOWN:
-            rotX += 15.0f;
-            break;
-        case GLUT_KEY_LEFT:
-            rotY -= 15.0f;
-            break;
-        case GLUT_KEY_RIGHT:
-            rotY += 15.0f;
-            break;
-    }
-    
-    EspecificaParametrosVisualizacao();
-    glutPostRedisplay();
 }
 
 int main(int argc, char **argv) {
@@ -264,7 +261,6 @@ int main(int argc, char **argv) {
 	glutDisplayFunc(Desenha);
 	glutReshapeFunc(AlteraTamanhoJanela);
 	glutKeyboardFunc(GerenciaTeclado);
-	glutSpecialFunc(TeclasEspeciais);
 	Inicializa();
 	glutMainLoop();
 }
