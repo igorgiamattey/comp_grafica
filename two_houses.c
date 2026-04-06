@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
 	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(scrW, scrH);
 	
-	glutCreateWindow("House 3D");
+	glutCreateWindow("Two Houses");
 	glutDisplayFunc(Desenha);
 	glutReshapeFunc(AlteraTamanhoJanela);
 	glutKeyboardFunc(GerenciaTeclado);

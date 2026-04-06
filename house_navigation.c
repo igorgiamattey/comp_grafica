@@ -42,6 +42,12 @@ HouseState houses[2] = {
 	{0.0f, 0.0f, 0.0f,  60.0f}
 };
 
+double normaliseYaw(float yaw) {
+	yaw += 90.0;
+	double norm = yaw - 360 * floor((yaw + 180)/360.0);
+	return norm == -180.0 ? 180.0 : norm;
+}
+
 void EspecificaParametrosVisualizacao (void){
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -231,7 +237,7 @@ void RenderText (float x, float y, const char *string){
 void DrawHUD (void){
 	
 	char yawStr[32];
-	sprintf(yawStr, "Yaw: %.2f", camYaw);
+	sprintf(yawStr, "Yaw: %.2f", normaliseYaw(camYaw));
 	const char* lines[] = {
 		yawStr,
 		" ",
@@ -427,7 +433,7 @@ int main(int argc, char **argv) {
 	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(scrW, scrH);
 	
-	glutCreateWindow("House 3D");
+	glutCreateWindow("House Navigation");
 	glutDisplayFunc(Desenha);
 	glutReshapeFunc(AlteraTamanhoJanela);
 	glutKeyboardFunc(GerenciaTeclado);
